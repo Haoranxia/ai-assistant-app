@@ -1,0 +1,23 @@
+# Python-generated files
+__pycache__/
+*.py[oc]
+build/
+dist/
+wheels/
+*.egg-info
+.venv
+venv/
+.vscode/
+*.pyc
+
+# Other files
+info.txt
+credentials.json
+token.json
+creds/
+
+# macOS
+.DS_Store
+
+# uv
+uv.lock
