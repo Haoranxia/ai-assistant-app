@@ -1,0 +1,59 @@
+General flow:
+1. Parse intent into JSON: create, update, delete, find availability.
+2. Validate required fields.
+3. Resolve relative dates using timezone.
+4. Search calendar if needed.
+5. Ask clarification if ambiguous.
+6. Show proposed action.
+7. Only write after confirmation, unless the user explicitly says “just do it.”
+
+***************************
+EXAMPLE SCHEMA (ENFORCE THIS STRUCTURE)
+class CalendarIntent(BaseModel):
+    action: Literal["create_event", "update_event", "delete_event", "find_events", "find_availability"]
+    title: str | None = None
+    date: str | None = None
+    start_time: str | None = None
+    end_time: str | None = None
+    duration_minutes: int | None = None
+    location: str | None = None
+    attendees: list[str] = []
+    recurrence: str | None = None
+    clarification_needed: bool = False
+    clarification_question: str | None = None
+
+    
+
+***************************
+EX1: Clear input and output
+INPUT: 
+Add lunch with Sara next Friday from 12:30 to 1:30 at De Pijp.
+
+AGENT OUTPUT INTERNALLY:
+{
+  "action": "create_event",
+  "title": "Lunch with Sara",
+  "date": "2026-07-03",
+  "start_time": "12:30",
+  "end_time": "13:30",
+  "location": "De Pijp",
+  "attendees": []
+}
+
+AGENT OUTPUT EXTERNALLY (TO USER):
+I’ll create “Lunch with Sara” next Friday from 12:30–13:30 at De Pijp. Confirm?
+
+
+***************************
+EX2: Unclear input and output
+INPUT:
+Schedule a call with Alex sometime Tuesday afternoon.
+{
+  "action": "create_event",
+  "title": "Call with Alex",
+  "date": "2026-07-07",
+  "duration": null,
+  "time_window": "afternoon",
+  "missing": ["duration", "exact_time"]
+}
+

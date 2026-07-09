@@ -1,7 +1,6 @@
 from pathlib import Path
 
-from fastapi import APIRouter
-from pydantic import BaseModel
+from fastapi.responses import RedirectResponse
 
 from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
@@ -9,8 +8,8 @@ from google_auth_oauthlib.flow import Flow
 
 # This file contains functionality that the API will make use of
 #TODO: Remove hardcoded things
-CLIENT_SECRET_FILE = Path("creds/credentials.json")
-CREDS_DIR = Path("creds") # Where we store the credentials
+CLIENT_SECRET_FILE = Path("app/creds/credentials.json")
+CREDS_DIR = Path("app/database") # Where we store the credentials
 SCOPES = ["https://www.googleapis.com/auth/calendar"]
 REDIRECT_URI = "http://localhost:8000/auth/google/callback" # Used in auth_backend.py
 
@@ -20,8 +19,8 @@ def get_token_file(user_id: str) -> Path:
     Get the token file path associated with this specific user
     """
     # create custom directory for this user
-    user_creds_dir = CREDS_DIR / user_id    
-    user_creds_dir.mkdir(parents=True, exists_ok=True)  
+    user_creds_dir = CREDS_DIR / user_id
+    user_creds_dir.mkdir(parents=True, exist_ok=True)
     return user_creds_dir / "token.json"
 
 
@@ -40,7 +39,7 @@ def create_flow(state: str | None = None) -> Flow:
     return flow
 
 
-def get_authorization_url() -> tuple[str, str]:
+def get_authorization_url() -> RedirectResponse:
     """ 
     Using the created Flow object we return an url through which the
     user must authenticate
@@ -51,13 +50,16 @@ def get_authorization_url() -> tuple[str, str]:
         include_granted_scopes="true",
         prompt="consent",
     )
-
-    return authorization_url, state
+    response = RedirectResponse(url=authorization_url)
+    response.set_cookie("google_oauth_state", state, httponly=True, samesite="lax")
+    response.set_cookie("code_verifier", flow.code_verifier, httponly=True, samesite="lax")
+    return response
 
 
 def exchange_callback_for_credentails(
         authorization_response: str,
         state: str,
+        code_verifier: str,
         user_id: str,
 ) -> Credentials:
     """ 
@@ -65,9 +67,10 @@ def exchange_callback_for_credentails(
     back. We use this response to go about obtaining the token
     """
     flow = create_flow(state=state)
+    flow.code_verifier = code_verifier
     flow.fetch_token(authorization_response=authorization_response)
     credentials = flow.credentials
-    save_credentials(user_id, credentials) 
+    save_credentials(user_id, credentials)
     return credentials
 
 
@@ -101,6 +104,7 @@ def get_valid_credentials(user_id: str) -> Credentials | None:
     Check if credentials are valid. Whether it exists or is expired
     """
     credentials = load_credentails(user_id)
+    
     if credentials is None:
         return None
     
@@ -108,11 +112,11 @@ def get_valid_credentials(user_id: str) -> Credentials | None:
         return credentials
     
     # Refresh token if it doesnt exist. Assumes the user has already
-    # sepcified a token before and therefore the 'Credentials' object
+    # specified a token before and therefore the 'Credentials' object
     # is not None. So we can reuse that object with a refresh(Request())
     if credentials.expired and credentials.refresh_token:
         credentials.refresh(Request())
-        save_credentials(credentials=credentials)
+        save_credentials(user_id=user_id, credentials=credentials)
         return credentials
 
     return None

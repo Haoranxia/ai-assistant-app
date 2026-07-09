@@ -1,0 +1,31 @@
+### General large todos
+1. Add database for storing credentials
+   Also used for double checking whether an user already has a usable token
+2. 
+
+
+### Service todos
+1. Create calender event x [I can create calender events through my backend]
+2. Delete events
+3. Get events 
+
+
+### AI service 
+1. Get calender events
+   -> LLM prompt to get calender services
+   -> Let LLM call the correct API backend function
+   -> Restructure retrieved data using LLM
+   -> Return to user reformatted by LLM
+2. Create calender events
+   -> As LLM prompt? Make sure user specifies all required information
+   -> Agentic loop? Agentic framework somehow? TBD here...
+
+
+User prompt
+  -> /assistant/chat endpoint
+    -> assistant_service.run_calendar_assistant(...)
+      -> LLM decides intent / tool call
+        -> validated calendar tool function
+          -> calendar_service
+            -> Google Calendar API
+      -> assistant formats final response

@@ -1,0 +1,3 @@
+Some notes on frontend
+
+1. Store the JWT token once we logged in in frontend and add it to requests somehow?

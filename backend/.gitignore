@@ -10,11 +10,20 @@ venv/
 .vscode/
 *.pyc
 
+# Other folders
+creds/
+
+database/
+app/database/
+
+testing/
+app/testing/
+
 # Other files
 info.txt
 credentials.json
 token.json
-creds/
+test.ipynb
 
 # macOS
 .DS_Store

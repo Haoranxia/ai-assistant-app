@@ -1,6 +1,6 @@
 """ Main file for our API server """
 from fastapi import FastAPI
-from api import calendar_backend
+from app.api import calendar_backend, auth_backend
 
 # Initialize other processes
 # TODO
@@ -8,6 +8,7 @@ from api import calendar_backend
 # API
 app = FastAPI()
 app.include_router(calendar_backend.router, prefix="/calendar", tags=["calendar"])
+app.include_router(auth_backend.router, prefix="/auth", tags=["auth"])
 
 # Allow cross-origin requests: allows us to request resources from a different origin.
 # in our case our frontend will reside on the origins below
