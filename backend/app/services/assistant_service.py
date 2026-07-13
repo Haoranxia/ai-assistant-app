@@ -4,14 +4,17 @@ import uuid
 from pathlib import Path
 from typing import Literal
 
-from smolagents import ToolCallingAgent, LiteLLMModel
+from smolagents import CodeAgent, LiteLLMModel
 from pydantic import BaseModel, ValidationError
 
-from app.services.assistant_tools import CalendarTools
+from app.services.assistant_tools import make_calendar_tools
+from app.config import DB_USERS_PATH
 
 # Static variables
 SYS_PROMPT_PATH = "database/system_prompt.md" #TODO: Move this to a config file
 MAX_RETRIES = 2
+
+
 
 model = LiteLLMModel(
     model_id="ollama_chat/qwen2.5:3b-instruct",
@@ -36,6 +39,12 @@ class AgentResponse(BaseModel):
     pending_action: dict | None = None
     missing_fields: list[str] = []
 
+class AssistantChatRequest(BaseModel):
+    """ 
+    Schema defining the structure of a chat request with our agent through our api
+    """
+    prompt: str
+
 
 ### MISC FUNCTIONS
 def create_new_session(user_id: str) -> str:
@@ -47,11 +56,21 @@ def create_new_session(user_id: str) -> str:
     """
     # Generate a new session_id
     session_id = str(uuid.uuid4())
-    # Create a new context file using this session_id
-    with open(f"database/{user_id}/{session_id}_context.json", 'w', encoding='UTF-8') as _:
-        pass
 
-    return session_id
+    # Create a new context file using this session_id
+    user_file = DB_USERS_PATH / user_id / f"{session_id}_context.json"
+    try:
+        user_file.parent.mkdir(parents=True, exist_ok=True)
+        user_file.touch(exist_ok=True)
+        initialize_context(user_file)
+
+        return session_id
+
+    except Exception as e:
+        # TODO: Improve this
+        print(e)
+        return "failed"
+
 
 def delete_session(user_id: str, session_id: str):
     """ 
@@ -60,12 +79,23 @@ def delete_session(user_id: str, session_id: str):
         user_id:    id of the user
         session_id: id of the session to be deleted
     """
-    file_path = Path(f"database/{user_id}/{session_id}_context.json")
+    file_path = DB_USERS_PATH / user_id / f"{session_id}_context.json"
     if os.path.exists(file_path):
         os.remove(file_path)
 
 
 ### CONTEXT (AGENT HISTORY) MANAGEMENT FUNCTIONS
+def initialize_context(context_path: Path):
+    """ 
+    Initialize the context file with an empty history
+    """
+    initial_context = {
+        "history": []
+    }
+
+    with context_path.open("w") as f:
+        json.dump(initial_context, f, indent=4)
+
 def load_context(context_path: Path) -> str:
     """ 
     Load the system prompt and user specific context into one piece of context
@@ -116,21 +146,19 @@ def update_context_file(state: dict, context_path: Path):
 
 
 ### AGENT FUNCTIONS
-def build_agent(user_id: str, context: str) -> ToolCallingAgent:
+def build_agent(user_id: str, context: str) -> CodeAgent:
     """ 
     Constructs an agent using relevant information for the specific user
     as specified by user_id
+    Args:
+        user_id:
+        context:
     """
     # Construct agent
-    calendar_tools = CalendarTools(user_id=user_id)
-    tools_list = [calendar_tools.get_event_tool]
-    return ToolCallingAgent(
+    return CodeAgent(
             model=model,
-            tools=tools_list,
+            tools=make_calendar_tools(user_id),
             max_steps=3,
-            verbosity=1,
-            grammar=None,
-            description=None,
             instructions=context
     )
 
@@ -142,7 +170,7 @@ def run_calendar_assistant(user_id: str, session_id: str, prompt: str) -> str:
         session_id: unique id corresponding to a specific chat session.
         prompt:     a string containing the literal prompt that the user typed to sent to the agent.
     """
-    context_path = Path(f"database/{user_id}/{session_id}_context.json")
+    context_path = DB_USERS_PATH / user_id / f"{session_id}_context.json"
     context = load_context(context_path)    # Load agent state based on user_id
 
     for _ in range(MAX_RETRIES):
@@ -158,14 +186,14 @@ def run_calendar_assistant(user_id: str, session_id: str, prompt: str) -> str:
 
         try:
             validated_response: AgentResponse = AgentResponse.model_validate(response)
-
+            validated_response_dict = validated_response.model_dump()
             if validated_response.status == "need_clarification":
                 # Update the context history with info of the last thought-action-observation context
                 # Ask user for clarification
-                update_context_file(validated_response, context_path)
+                update_context_file(validated_response_dict, context_path)
         
             elif validated_response.status == "awaiting_confirmation":
-                update_context_file(validated_response, context_path)
+                update_context_file(validated_response_dict, context_path)
             
             elif validated_response.status == "failed":
                 reset_context(context_path)
@@ -174,7 +202,7 @@ def run_calendar_assistant(user_id: str, session_id: str, prompt: str) -> str:
                 reset_context(context_path)
 
             # The message contains the response of the LLM to the prompt
-            return validated_response.message
+            return validated_response_dict['message']
 
         except ValidationError as e:
             # Ask LLM to fix the output

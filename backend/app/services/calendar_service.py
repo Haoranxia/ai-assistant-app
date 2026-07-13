@@ -11,7 +11,7 @@ class CalendarEvent(BaseModel):
     Simple model for calendar events
     """
     title: str
-    start: str 
+    start: str
     end: str
     description: str
 
@@ -22,6 +22,11 @@ def get_calendar_service_for_user(user_id: str) -> Any:
     which we can use to access calendar functionality from
     """
     creds = get_valid_credentials(user_id)
+    if creds is None:
+        raise RuntimeError(
+            f"No Google OAuth credentials stored for user {user_id}"
+        )
+    
     return build(serviceName="calendar", version="v3", credentials=creds)
 
 

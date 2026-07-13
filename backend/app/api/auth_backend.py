@@ -1,6 +1,9 @@
 from fastapi import APIRouter, HTTPException, Request, Depends
 from app.services import auth_service, session_service
 
+# TODO: Only enable this for local development. OAuth2 wants to use https but its a hassle :p
+import os
+os.environ["OAUTHLIB_INSECURE_TRANSPORT"] = "1"
 
 router = APIRouter()
 

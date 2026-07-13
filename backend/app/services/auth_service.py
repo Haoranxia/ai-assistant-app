@@ -6,10 +6,11 @@ from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
 from google_auth_oauthlib.flow import Flow
 
+from app.config import DB_USERS_PATH
+
 # This file contains functionality that the API will make use of
-#TODO: Remove hardcoded things
-CLIENT_SECRET_FILE = Path("app/creds/credentials.json")
-CREDS_DIR = Path("app/database") # Where we store the credentials
+#TODO: Remove hardcoded things eventually
+CLIENT_SECRET_FILE = Path("app/database/credentials.json")
 SCOPES = ["https://www.googleapis.com/auth/calendar"]
 REDIRECT_URI = "http://localhost:8000/auth/google/callback" # Used in auth_backend.py
 
@@ -19,7 +20,7 @@ def get_token_file(user_id: str) -> Path:
     Get the token file path associated with this specific user
     """
     # create custom directory for this user
-    user_creds_dir = CREDS_DIR / user_id
+    user_creds_dir = DB_USERS_PATH / user_id
     user_creds_dir.mkdir(parents=True, exist_ok=True)
     return user_creds_dir / "token.json"
 

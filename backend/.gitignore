@@ -12,9 +12,9 @@ venv/
 
 # Other folders
 creds/
+misc/
 
 database/
-app/database/
 
 testing/
 app/testing/

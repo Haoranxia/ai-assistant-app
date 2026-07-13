@@ -4,7 +4,7 @@ from app.services import session_service
 
 router = APIRouter()
 
-@router.post("/assistant/new_chat")
+@router.post("/new_chat")
 def new_chat(
     user_id: str = Depends(session_service.get_current_user_id)
 ):
@@ -16,7 +16,7 @@ def new_chat(
     return {"session_id": session_id}   # frontend will store this for that session
 
 
-@router.delete("/assistant/close_chat")
+@router.delete("/close_chat/{session_id}")
 def close_chat(
     session_id: str = None,
     user_id: str = Depends(session_service.get_current_user_id),
@@ -28,18 +28,21 @@ def close_chat(
         return {"status": "error"}
     
     assistant_service.delete_session(user_id, session_id)
+    return {"status": "deletion successful"}
 
 
 
-@router.post("/assistant/prompt")
+@router.post("/chat/{session_id}/message")
 def assistant_chat(
-    prompt: str,
-    session_id: str,
+    request: assistant_service.AssistantChatRequest,
+    session_id: str = None,
     user_id: str = Depends(session_service.get_current_user_id)
 ):
     """ 
     Endpoint for spinning up an agent to process the prompt.
     User interacts with agent via chat messages through this API endpoint
     """
+    prompt = request.prompt
     response = assistant_service.run_calendar_assistant(user_id, session_id, prompt)
+    
     return {"response": response}
