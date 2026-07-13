@@ -1,0 +1,19 @@
+{
+  "history": [
+    {
+      "role": "user",
+      "content": "Schedule dentist next Tuesday"
+    },
+    {
+      "role": "agent",
+      "status": "awaiting_confirmation",
+      "message": "Create dentist appointment next Tuesday 14:00–15:00?",
+      "pending_action": {
+        "type": "create_event",
+        "title": "Dentist appointment",
+        "start_time": "2026-07-08T14:00:00+02:00",
+        "end_time": "2026-07-08T15:00:00+02:00"
+      }
+    }
+  ]
+}

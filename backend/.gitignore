@@ -13,9 +13,6 @@ venv/
 # Other folders
 creds/
 misc/
-
-database/
-
 testing/
 app/testing/
 
